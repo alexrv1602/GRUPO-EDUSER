@@ -335,35 +335,17 @@ if (contactForm) {
     }
 
     (async function processSubmission() {
-      // 1. Envío a través del procesador nativo PHP en el servidor (Hostinger / Apache)
-      if (window.location.protocol.startsWith('http')) {
-        try {
-          const res = await fetch('contacto.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success) {
-              handleSuccess();
-              return;
-            }
-          }
-        } catch (e) {
-          console.warn('contacto.php no disponible localmente, probando alternativa...', e);
-        }
-      }
+      const w3Key = (document.getElementById('w3fKey')?.value || window.WEB3FORMS_ACCESS_KEY || '').trim();
+      const isGitHub = window.location.hostname.includes('github.io');
 
-      // 2. Si se configuró Web3Forms Access Key
-      const w3Key = document.getElementById('w3fKey')?.value || window.WEB3FORMS_ACCESS_KEY;
-      if (w3Key && w3Key.trim().length > 10) {
+      // 1. Si está en GitHub Pages o se configuró Web3Forms Access Key
+      if (w3Key && w3Key.length > 10) {
         try {
           const w3Res = await fetch('https://api.web3forms.com/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({
-              access_key: w3Key.trim(),
+              access_key: w3Key,
               subject: payload._subject,
               from_name: `${fName} (${fOrg})`,
               ...payload
@@ -378,6 +360,26 @@ if (contactForm) {
           }
         } catch (e) {
           console.warn('Web3Forms no respondió:', e);
+        }
+      }
+
+      // 2. Si está en un servidor con soporte PHP (Hostinger, Apache, etc.)
+      if (!isGitHub && window.location.protocol.startsWith('http')) {
+        try {
+          const res = await fetch('contacto.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              handleSuccess();
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('contacto.php no disponible:', e);
         }
       }
 
