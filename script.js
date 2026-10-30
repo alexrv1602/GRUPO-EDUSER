@@ -271,18 +271,132 @@ if (contactForm) {
       return;
     }
 
-    // Simulación de envío exitoso
-    const btn = contactForm.querySelector('.btn-submit');
-    btn.disabled = true;
-    btn.querySelector('.btn-text').textContent = 'Enviando…';
+    // Envío multi-canal a contactoeduser@grupoeduserr.com
+    const emailField = document.getElementById('fEmail');
+    const emailVal = emailField ? emailField.value.trim() : '';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emailField && !emailRegex.test(emailVal)) {
+      emailField.style.borderColor = '#DC2626';
+      emailField.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.15)';
+      showMsg('Por favor ingrese un correo electrónico válido.', 'error');
+      return;
+    }
 
-    setTimeout(() => {
-      const folio = 'GE-' + Date.now().toString().slice(-6);
-      showMsg(`✓ Solicitud enviada correctamente. Su folio es: <strong>${folio}</strong>. Le contactaremos a la brevedad.`, 'success');
+    const btn = contactForm.querySelector('.btn-submit');
+    const btnText = btn.querySelector('.btn-text');
+    const originalBtnText = btnText ? btnText.textContent : 'Enviar Solicitud';
+    btn.disabled = true;
+    if (btnText) btnText.textContent = 'Enviando…';
+
+    const fName = document.getElementById('fName').value.trim();
+    const fOrg = document.getElementById('fOrg').value.trim();
+    const fPhone = document.getElementById('fPhone').value.trim();
+    const fEmail = emailVal;
+    const fAxisSel = document.getElementById('fAxis');
+    const fAxisText = fAxisSel && fAxisSel.selectedIndex >= 0 ? fAxisSel.options[fAxisSel.selectedIndex].text : '';
+    const fMessage = document.getElementById('fMessage').value.trim();
+    const folio = 'GE-' + Date.now().toString().slice(-6);
+
+    const payload = {
+      Folio: folio,
+      Nombre: fName,
+      Empresa: fOrg,
+      "Teléfono": fPhone,
+      "Correo remitente": fEmail,
+      "Eje de Interés": fAxisText,
+      Mensaje: fMessage,
+      _subject: `Nuevo Requerimiento Web [${folio}] - ${fName} (${fOrg})`
+    };
+
+    // Enlaces directos de respaldo (mailto y WhatsApp)
+    const mailtoSub = encodeURIComponent(`Nuevo Requerimiento [${folio}] - ${fName} (${fOrg})`);
+    const mailtoBody = encodeURIComponent(
+      `FOLIO: ${folio}\n` +
+      `NOMBRE: ${fName}\n` +
+      `EMPRESA: ${fOrg}\n` +
+      `TELÉFONO: ${fPhone}\n` +
+      `CORREO: ${fEmail}\n` +
+      `EJE: ${fAxisText}\n\n` +
+      `DETALLE DEL REQUERIMIENTO:\n${fMessage}`
+    );
+    const mailtoUrl = `mailto:contactoeduser@grupoeduserr.com?subject=${mailtoSub}&body=${mailtoBody}`;
+    const cleanPhone = '50223395672';
+    const waText = encodeURIComponent(`Hola GRUPO EDUSER, he registrado el requerimiento ${folio} para ${fOrg}.\nNombre: ${fName}\nServicio: ${fAxisText}`);
+    const waUrl = `https://wa.me/${cleanPhone}?text=${waText}`;
+
+    function handleSuccess() {
+      showMsg(
+        `✓ <strong>¡Solicitud enviada exitosamente!</strong><br>` +
+        `Hemos recibido su requerimiento y enviado una notificación a <strong>contactoeduser@grupoeduserr.com</strong>.<br>` +
+        `Su folio de seguimiento es: <strong>${folio}</strong>. Le contactaremos a la brevedad.`,
+        'success'
+      );
       contactForm.reset();
-      btn.disabled = false;
-      btn.querySelector('.btn-text').textContent = 'Enviar Solicitud';
-    }, 1800);
+    }
+
+    (async function processSubmission() {
+      // 1. Envío a través del procesador nativo PHP en el servidor (Hostinger / Apache)
+      if (window.location.protocol.startsWith('http')) {
+        try {
+          const res = await fetch('contacto.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              handleSuccess();
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('contacto.php no disponible localmente, probando alternativa...', e);
+        }
+      }
+
+      // 2. Si se configuró Web3Forms Access Key
+      const w3Key = document.getElementById('w3fKey')?.value || window.WEB3FORMS_ACCESS_KEY;
+      if (w3Key && w3Key.trim().length > 10) {
+        try {
+          const w3Res = await fetch('https://api.web3forms.com/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+              access_key: w3Key.trim(),
+              subject: payload._subject,
+              from_name: `${fName} (${fOrg})`,
+              ...payload
+            })
+          });
+          if (w3Res.ok) {
+            const w3Data = await w3Res.json();
+            if (w3Data.success) {
+              handleSuccess();
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('Web3Forms no respondió:', e);
+        }
+      }
+
+      // 3. Fallback directo cuando se prueba en local o sin servidor activo
+      showMsg(
+        `<strong>Solicitud registrada (Folio: ${folio})</strong><br>` +
+        `Para completar el envío hacia <strong>contactoeduser@grupoeduserr.com</strong>, elija la opción que prefiera:<br><br>` +
+        `<div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0.4rem;">` +
+        `<a href="${mailtoUrl}" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.6rem 1rem; font-size:0.8rem; text-decoration:none;">✉️ Enviar por Correo Directo</a>` +
+        `<a href="${waUrl}" target="_blank" rel="noopener" class="btn btn-gold" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.6rem 1rem; font-size:0.8rem; text-decoration:none;">💬 Enviar por WhatsApp</a>` +
+        `</div>`,
+        'error'
+      );
+      window.location.href = mailtoUrl;
+    })()
+      .finally(() => {
+        btn.disabled = false;
+        if (btnText) btnText.textContent = originalBtnText;
+      });
   });
 
   // Live validation reset

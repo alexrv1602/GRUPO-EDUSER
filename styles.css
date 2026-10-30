@@ -543,8 +543,9 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 .footer-top-band { height: 3px; background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-primary-light) 100%); position: absolute; top: 0; left: 0; width: 100%; }
 
 .footer-container { display: grid; grid-template-columns: 1.5fr 1fr 1.2fr; gap: 3rem; padding-bottom: 3rem; }
-.footer-logo-card { background: #fff; padding: 0.65rem 0.9rem; border-radius: var(--radius); display: inline-block; margin-bottom: 1rem; }
-.footer-logo { height: 42px; width: auto; display: block; }
+.footer-logo-link, .footer-logo-card { display: inline-block; margin-bottom: 1.25rem; transition: transform var(--transition), opacity var(--transition); }
+.footer-logo-link:hover { opacity: 0.92; transform: translateY(-1px); }
+.footer-logo { height: 58px; width: auto; max-width: 250px; display: block; object-fit: contain; }
 .footer-motto { font-family: var(--font-title); font-size: 0.95rem; font-style: italic; font-weight: 600; color: var(--color-gold); margin-bottom: 0.5rem; }
 .footer-text { font-size: 0.825rem; line-height: 1.6; color: #7A9AB8; max-width: 350px; }
 
